@@ -1,0 +1,118 @@
+<html>
+	<body>
+		<canvas id="myCanvas" width="320" height="240" style="border:1px solid #000000;"></canvas>
+		<script>
+			"use strict";
+			
+			function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+			
+			
+			document.onkeydown = function(event) {
+				event = event || window.event;
+
+				var e = event.keyCode;
+				
+				var dirtorad = Math.PI * (player.dir / 180)
+				
+				if (e==65 /*a*/){
+					player.dir = (player.dir - 5)  % 360;
+				}
+
+				if (e==68 /*d*/){
+					player.dir = (player.dir + 5)  % 360;
+				}
+				
+				if (e==87 /*w*/){
+					player.x = player.x + 10 * Math.cos(dirtorad);
+					player.y = player.y + 10 * Math.sin(dirtorad);
+				}
+
+				if (e==83 /*s*/){
+					player.x = player.x - 10 * Math.cos(dirtorad);
+					player.y = player.y - 10 * Math.sin(dirtorad);
+				}
+				
+				ctx.fillStyle = "#000000";
+				ctx.fillRect(0, 120-max, myCanvas.width, 120+max);
+				max = player.render();
+			}
+			
+			
+			var c = document.getElementById("myCanvas");
+			var ctx = c.getContext("2d");
+			var player = {
+				level : [[1,1,1,1,1,1,1,1],
+						[1,0,0,0,0,0,0,1],
+						[1,0,0,0,0,1,0,1],
+						[1,0,0,0,0,0,0,1],
+						[1,0,0,0,0,0,0,1],
+						[1,0,0,0,0,0,0,1],
+						[1,0,0,0,0,0,0,1],
+						[1,1,1,1,1,1,1,1]],
+				x		: 200,
+				y		: 400,
+				dir		: 0,
+				fov		: 80,
+				rayarray: [],
+				raycast	: function(rayangle) {
+					var isCollision = false;
+					var rayX;
+					var rayY;
+					var rayDist = 0;
+					rayangle = Math.PI * (rayangle / 180);
+					while (true) {
+						rayX = this.x + rayDist * Math.cos(rayangle);
+						rayY = this.y + rayDist * Math.sin(rayangle);
+						if (this.level[rayX/100|0][rayY/100|0] === 1)
+						{
+							return rayDist; //* Math.cos(rayangle);
+						}
+						else
+						{
+							if (rayDist > 1000) {
+								return 1000;
+							} else {
+								rayDist += 1;
+							};
+						};
+					};
+				},
+				render	: function() {
+					
+					var foo;
+					var i = 0;
+					var max = 0;
+					var derp;
+					for (i = 0; i < 320; i = i + 3) {
+						foo = this.raycast((this.dir - this.fov / 2) + (this.fov / 320) * i); //rayarray[i] =
+						//foo = Math.max(foo, 8);
+						derp = (4000/foo|0);
+						ctx.beginPath();
+						ctx.moveTo(i,120-derp);
+						ctx.lineTo(i,120+derp);
+						ctx.stroke();
+						ctx.strokeStyle=rgbToHex(Math.min(derp*10,255),Math.min(derp*10,255),0);
+						ctx.closePath();
+						if (derp > max) { max = derp };
+					};
+					return max;
+				}
+			};
+			
+			var max = 0;
+			
+			ctx.fillStyle = "#000000";
+			ctx.fillRect(0, 0, myCanvas.width, myCanvas.height);
+			player.render();
+			
+			ctx.fillStyle = "#000000";
+		</script>
+	</body>
+</html>
