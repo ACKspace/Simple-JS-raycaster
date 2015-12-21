@@ -1,6 +1,9 @@
 <html>
 	<body>
-		<canvas id="myCanvas" width="320" height="240" style="border:1px solid #000000;"></canvas>
+		<div style="position: relative;">
+			<canvas id="Canvas_Main" width="640" height="480" style="border:1px solid #000000; position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
+			<canvas id="Canvas_HUD" width="640" height="480" style="position: absolute; left: 0; top: 0; z-index: 1;"></canvas>
+		</div>
 		<script>
 			"use strict";
 			
@@ -16,73 +19,141 @@ function rgbToHex(r, g, b) {
 			
 			document.onkeydown = function(event) {
 				event = event || window.event;
-
 				var e = event.keyCode;
 				
-				var dirtorad = Math.PI * (player.dir / 180)
-				
 				if (e==65 /*a*/){
-					player.dir = (player.dir - 5)  % 360;
+					player.a = true;
 				}
 
 				if (e==68 /*d*/){
-					player.dir = (player.dir + 5)  % 360;
+					player.d = true;
 				}
 				
 				if (e==87 /*w*/){
-					player.x = player.x + 10 * Math.cos(dirtorad);
-					player.y = player.y + 10 * Math.sin(dirtorad);
-				}
-
-				if (e==83 /*s*/){
-					player.x = player.x - 10 * Math.cos(dirtorad);
-					player.y = player.y - 10 * Math.sin(dirtorad);
+					player.w = true;
 				}
 				
-				ctx.fillStyle = "#000000";
-				ctx.fillRect(0, 120-max, myCanvas.width, 120+max);
-				max = player.render();
+				if (e==83 /*s*/){
+					player.s = true;
+				}				
 			}
 			
+			document.onkeyup = function(event) {
+				event = event || window.event;
+
+				var e = event.keyCode;
+				
+				if (e==65 /*a*/){
+					player.a = false;	
+				}
+
+				if (e==68 /*d*/){
+					player.d = false;
+				}
+				
+				if (e==87 /*w*/){
+					player.w = false;
+				}
+				
+				if (e==83 /*s*/){
+					player.s = false;
+				}				
+			}
 			
-			var c = document.getElementById("myCanvas");
+			var c = document.getElementById("Canvas_Main");
 			var ctx = c.getContext("2d");
+			
+			var ch = document.getElementById("Canvas_HUD");
+			var chtx = ch.getContext("2d");
+			
 			var player = {
 				level : [[1,1,1,1,1,1,1,1],
-						[1,0,0,0,0,0,0,1],
-						[1,0,0,0,0,1,0,1],
-						[1,0,0,0,0,0,0,1],
-						[1,0,0,0,0,0,0,1],
-						[1,0,0,0,0,0,0,1],
+						[1,0,0,0,0,2,0,1],
+						[1,0,0,2,0,2,0,1],
+						[1,2,2,2,0,0,0,1],
+						[1,0,0,2,0,2,2,1],
+						[1,0,0,2,0,2,0,1],
 						[1,0,0,0,0,0,0,1],
 						[1,1,1,1,1,1,1,1]],
 				x		: 200,
 				y		: 400,
+				fwdspeed: 0,
+				sdespeed: 0,
 				dir		: 0,
 				fov		: 80,
+				w		: false,
+				a		: false,
+				s		: false,
+				d		: false,
 				rayarray: [],
-				raycast	: function(rayangle) {
-					var isCollision = false;
-					var rayX;
-					var rayY;
-					var rayDist = 0;
+				raycast	: function(rayangle) { // Thanks for the DDA explanation lodev.org!
 					rayangle = Math.PI * (rayangle / 180);
-					while (true) {
-						rayX = this.x + rayDist * Math.cos(rayangle);
-						rayY = this.y + rayDist * Math.sin(rayangle);
-						if (this.level[rayX/100|0][rayY/100|0] === 1)
+					var mapX = player.x;
+					var mapY = player.y;
+					var rayDirX = Math.cos(rayangle);
+					var rayDirY = Math.sin(rayangle);
+					var deltaDistX = Math.sqrt(1 + (rayDirY * rayDirY) / (rayDirX * rayDirX));
+					var deltaDistY = Math.sqrt(1 + (rayDirX * rayDirX) / (rayDirY * rayDirY));
+					var perpWallDist;
+					var stepX;
+					var stepY;
+					var sideDistX;
+					var sideDistY;
+					var hit = 0;
+					var side;
+					var wall;
+					
+					if (rayDirX < 0)
+					{
+						stepX = -1;
+						sideDistX = (player.x - mapX) * deltaDistX;
+					}
+					else
+					{
+						stepX = 1;
+						sideDistX = (mapX + 1.0 - player.x) * deltaDistX;
+					};
+					if (rayDirY < 0)
+					{
+						stepY = -1;
+						sideDistY = (player.y - mapY) * deltaDistY;
+					}
+					else
+					{
+						stepY = 1;
+						sideDistY = (mapY + 1.0 - player.y) * deltaDistY;
+					};
+					
+			      //perform DDA
+					while (hit == 0)
+					{
+					//jump to next map square, OR in x-direction, OR in y-direction
+						if (sideDistX < sideDistY)
 						{
-							return rayDist; //* Math.cos(rayangle);
+							sideDistX += deltaDistX;
+							mapX += stepX;
+							side = 0;
 						}
 						else
 						{
-							if (rayDist > 1000) {
-								return 1000;
-							} else {
-								rayDist += 1;
-							};
-						};
+							sideDistY += deltaDistY;
+							mapY += stepY;
+							side = 1;
+						}
+						//Check if ray has hit a wall
+						wall = this.level[mapX/100|0][mapY/100|0];
+						if (wall > 0) { hit = 1; }
+					}
+					if (side == 0)
+					{
+						perpWallDist = Math.abs((mapX - player.x + (1 - stepX) / 2) / rayDirX);
+					}
+					else
+					{
+						perpWallDist = Math.abs((mapY - player.y + (1 - stepY) / 2) / rayDirY);
 					};
+					
+					return [perpWallDist * Math.cos(rayangle-Math.PI * (player.dir / 180)), wall];
 				},
 				render	: function() {
 					
@@ -90,15 +161,37 @@ function rgbToHex(r, g, b) {
 					var i = 0;
 					var max = 0;
 					var derp;
-					for (i = 0; i < 320; i = i + 3) {
-						foo = this.raycast((this.dir - this.fov / 2) + (this.fov / 320) * i); //rayarray[i] =
+					var asd;
+					
+					for (i = 0; i < Canvas_Main.width; i = i + 1) {
+						foo = this.raycast((this.dir - this.fov / 2) + (this.fov / Canvas_Main.width) * i); //rayarray[i] =
 						//foo = Math.max(foo, 8);
-						derp = (4000/foo|0);
+						derp = (4000/foo[0]|0);
+						
+						
+						if (foo[1] == 1) {
+							if (derp < 10) {
+								ctx.strokeStyle=rgbToHex(80, 0, 0);
+							}
+							else
+							{
+								asd = Math.min(derp*8,255);
+								ctx.strokeStyle=rgbToHex(asd, 0, 0);
+							}
+						} else {
+							if (derp < 10) {
+								ctx.strokeStyle=rgbToHex(0, 0, 80);
+							}
+							else
+							{
+								asd = Math.min(derp*8,255);
+								ctx.strokeStyle=rgbToHex(0, 0, asd);
+							}
+						}
 						ctx.beginPath();
-						ctx.moveTo(i,120-derp);
-						ctx.lineTo(i,120+derp);
+						ctx.moveTo(i,Canvas_Main.height/2-derp);
+						ctx.lineTo(i,Canvas_Main.height/2+derp);
 						ctx.stroke();
-						ctx.strokeStyle=rgbToHex(Math.min(derp*10,255),Math.min(derp*10,255),0);
 						ctx.closePath();
 						if (derp > max) { max = derp };
 					};
@@ -109,10 +202,45 @@ function rgbToHex(r, g, b) {
 			var max = 0;
 			
 			ctx.fillStyle = "#000000";
-			ctx.fillRect(0, 0, myCanvas.width, myCanvas.height);
+			ctx.fillRect(0, 0, Canvas_Main.width, Canvas_Main.height);
 			player.render();
+			
+			setInterval(function(){
+				var dirtorad = Math.PI * (player.dir / 180);
+				if (player.w == true) {
+					if (player.fwdspeed < 5) {
+						player.fwdspeed += 0.1;
+					}
+				}
+				if (player.a == true) { player.dir = (player.dir - 5)  % 360; };
+				if (player.s == true) { 
+					if (player.fwdspeed > -5) {
+						player.fwdspeed -= 0.1;
+					}
+				}
+				if (player.d == true) { player.dir = (player.dir + 5)  % 360; };
+				if (player.w == false && player.s == false)
+				{
+					if (player.fwdspeed < 0.2) { player.fwdspeed /= 1.5; }
+					else if (player.fwdspeed > 0.2) { player.fwdspeed /= 1.5; }
+					else { player.fwdspeed = 0; };
+				};
+				if (player.level[(player.x + player.fwdspeed * Math.cos(dirtorad))/100|0][(player.y + player.fwdspeed * Math.sin(dirtorad))/100|0] === 0) {
+					player.x = player.x + player.fwdspeed * Math.cos(dirtorad);
+					player.y = player.y + player.fwdspeed * Math.sin(dirtorad);
+				}
+				
+				ctx.clearRect(0, 0, Canvas_Main.width, Canvas_Main.height);
+				
+				max = player.render();
+			}, 16);
+			
+			setInterval(function(){
+				chtx.fillStyle = "#808080";
+				chtx.fillRect(Canvas_HUD.width * 0.45, Canvas_HUD.height * 0.85, Canvas_HUD.width * 0.1, Canvas_HUD.width * 0.1);
+			}, 500);
 			
 			ctx.fillStyle = "#000000";
 		</script>
 	</body>
-</html>
+</html>	
