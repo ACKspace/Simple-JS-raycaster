@@ -237,8 +237,23 @@ function rgbToHex(r, g, b) {
 			
 			setInterval(function(){
 				chtx.fillStyle = "#808080";
-				chtx.fillRect(Canvas_HUD.width * 0.45, Canvas_HUD.height * 0.85, Canvas_HUD.width * 0.1, Canvas_HUD.width * 0.1);
-			}, 500);
+				chtx.fillRect(Canvas_HUD.width -100 , Canvas_HUD.height -100, 80, 80);
+				var x;
+				var y;
+				for (y = 0; y < 8; y++) {
+					for (x = 0; x < 8; x++ ) {
+						if (player.level[x][y] == 1) {
+							chtx.fillStyle = "#FF0000";
+							chtx.fillRect(Canvas_HUD.width -100 + x*10 , Canvas_HUD.height -100 + y * 10, 10, 10);
+						} else if (player.level[x][y] == 2) {
+							chtx.fillStyle = "#0000FF";
+							chtx.fillRect(Canvas_HUD.width -100 + x*10 , Canvas_HUD.height -100 + y * 10, 10, 10);
+						};
+					};
+				};
+				chtx.fillStyle = "#00FF00";
+				chtx.fillRect(Canvas_HUD.width -102.5 + player.x/10 , Canvas_HUD.height -102.5 + player.y/10, 5, 5);
+			}, 50);
 			
 			ctx.fillStyle = "#000000";
 		</script>
